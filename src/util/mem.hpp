@@ -1,13 +1,17 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <type_traits>
 
-#ifdef __linux__
+#if defined(__ANDROID__)
+    #include <sys/mman.h>
+    #include <stdlib.h>  // posix_memalign
+#elif defined(__linux__)
     #include <sys/mman.h>
 #elif defined(_WIN32)
     #include <windows.h>
@@ -25,11 +29,26 @@ template<typename T>
 T* allocate_huge_page(std::size_t size) {
     constexpr static auto huge_page_size = 2 * 1024 * 1024;  // 2MB pages
 
-#ifdef __linux__
+#if defined(__ANDROID__)
+    // Android API 24 does not expose aligned_alloc(). Use the POSIX allocator
+    // available on Android instead; its memory is released with free().
+    size = ((size + huge_page_size - 1) / huge_page_size) * huge_page_size;
+    void* allocation = nullptr;
+    if (::posix_memalign(&allocation, huge_page_size, size) != 0) {
+        return nullptr;
+    }
+    T* data = static_cast<T*>(allocation);
+#if defined(MADV_HUGEPAGE)
+    madvise(data, size, MADV_HUGEPAGE);
+#endif
+    return data;
+#elif defined(__linux__)
     size    = ((size + huge_page_size - 1) / huge_page_size) * huge_page_size;
     T* data = static_cast<T*>(std::aligned_alloc(huge_page_size, size));
     if (data) {
+#ifdef MADV_HUGEPAGE
         madvise(data, size, MADV_HUGEPAGE);
+#endif
     }
     return data;
 #elif defined(_WIN32)
