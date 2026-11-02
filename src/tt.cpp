@@ -1,5 +1,9 @@
 #include "tt.hpp"
 #include <algorithm>  // For std::min
+#include <cstdlib>
+#if defined(__ANDROID__)
+    #include <stdlib.h>  // posix_memalign
+#endif
 #include <thread>
 
 namespace Clockwork {
@@ -16,6 +20,13 @@ static u64 mulhi64(u64 a, u64 b) {
 void* aligned_alloc(size_t alignment, size_t size) {
 #ifdef _WIN32
     return _aligned_malloc(size, alignment);
+#elif defined(__ANDROID__)
+    // Android API 24 does not expose aligned_alloc().
+    void* allocation = nullptr;
+    if (::posix_memalign(&allocation, alignment, size) != 0) {
+        return nullptr;
+    }
+    return allocation;
 #else
     return std::aligned_alloc(alignment, size);
 #endif
