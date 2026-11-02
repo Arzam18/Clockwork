@@ -1,10 +1,7 @@
 #include "movepick.hpp"
-#include "immintrin.h"
 #include "see.hpp"
 #include "tuned.hpp"
 #include "util/random.hpp"
-#include <emmintrin.h>
-#include <immintrin.h>
 
 namespace Clockwork {
 
