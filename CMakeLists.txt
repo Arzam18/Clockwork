@@ -183,7 +183,12 @@ else()
     add_executable(clockwork src/main.cpp)
     target_link_libraries(clockwork PUBLIC clockwork-lib)
     target_add_flags(clockwork)
-    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Android uses Bionic as a system shared library. A fully static link
+    # (-static) is not supported by the Android NDK; the Android toolchain
+    # selects the static libc++ runtime through ANDROID_STL=c++_static.
+    if(ANDROID)
+        # Keep the Android system runtime dynamic and avoid libc++_shared.so.
+    elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         target_link_options(clockwork PUBLIC
             $<$<CONFIG:Release>:
             -static -static-libgcc -static-libstdc++
